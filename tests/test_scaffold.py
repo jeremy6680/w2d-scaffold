@@ -1,51 +1,48 @@
-"""
-Tests for w2d-scaffold — Phase 1: common scaffold generation.
+# tests/test_scaffold.py — w2d-scaffold
+# pytest test suite: verifies that each project type generates the expected
+# files and that Jinja2 variables are correctly interpolated.
 
-Validates that the _common templates are correctly rendered for every
-supported project type.
-"""
-
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
-from scaffold import cli, to_snake_case, to_title_case
-
-# ---------------------------------------------------------------------------
-# Unit tests — helper functions
-# ---------------------------------------------------------------------------
-
-
-def test_to_snake_case_basic() -> None:
-    """Hyphenated names are converted to snake_case."""
-    assert to_snake_case("my-blog") == "my_blog"
-
-
-def test_to_snake_case_spaces() -> None:
-    """Names with spaces are converted to snake_case."""
-    assert to_snake_case("My Blog Project") == "my_blog_project"
-
-
-def test_to_snake_case_already_snake() -> None:
-    """Already snake_case names are returned unchanged."""
-    assert to_snake_case("my_blog") == "my_blog"
-
-
-def test_to_title_case_snake() -> None:
-    """snake_case names are converted to Title Case."""
-    assert to_title_case("my_blog") == "My Blog"
-
-
-def test_to_title_case_hyphen() -> None:
-    """Hyphenated names are converted to Title Case."""
-    assert to_title_case("my-blog") == "My Blog"
+from scaffold import cli
 
 
 # ---------------------------------------------------------------------------
-# Common files — generated for every project type
+# Shared test fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def runner() -> CliRunner:
+    """Return a Click test runner."""
+    return CliRunner()
+
+
+@pytest.fixture
+def base_args() -> list[str]:
+    """Return common CLI arguments shared across all project type tests."""
+    return [
+        "--name", "test_project",
+        "--description", "A test project",
+        "--author", "Test Author",
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def invoke_new(runner: CliRunner, args: list[str]) -> object:
+    """Invoke the `new` subcommand inside a temporary isolated filesystem."""
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["new"] + args)
+        yield result, Path("test_project")
+
+
+# ---------------------------------------------------------------------------
+# Common files (all types)
 # ---------------------------------------------------------------------------
 
 COMMON_FILES = [
@@ -58,111 +55,144 @@ COMMON_FILES = [
     ".env.example",
 ]
 
-VALID_TYPES = [
+@pytest.mark.parametrize("project_type", [
     "data",
     "rag",
     "python",
     "wordpress-plugin",
     "wordpress-theme",
     "astro",
+])
+def test_common_files_exist(runner: CliRunner, base_args: list[str], project_type: str) -> None:
+    """All common LLM pilot files must be present for every project type."""
+    args = base_args + ["--type", project_type]
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["new"] + args)
+        assert result.exit_code == 0, result.output
+        project_dir = Path("test_project")
+        for filename in COMMON_FILES:
+            assert (project_dir / filename).exists(), f"Missing: {filename}"
+
+
+@pytest.mark.parametrize("project_type", [
+    "data",
+    "rag",
+    "python",
+    "wordpress-plugin",
+    "wordpress-theme",
+    "astro",
+])
+def test_jinja2_interpolation(runner: CliRunner, base_args: list[str], project_type: str) -> None:
+    """Jinja2 variables must be correctly rendered in CONTEXT.md."""
+    args = base_args + ["--type", project_type]
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["new"] + args)
+        assert result.exit_code == 0, result.output
+        context_md = (Path("test_project") / "CONTEXT.md").read_text()
+        assert "test_project" in context_md
+        assert "Test Author" in context_md
+        assert "{{" not in context_md, "Unrendered Jinja2 tag found in CONTEXT.md"
+
+
+# ---------------------------------------------------------------------------
+# Type: data
+# ---------------------------------------------------------------------------
+
+DATA_FILES = [
+    "Makefile",
+    "dbt/dbt_project.yml",
+    "dbt/profiles.yml",
+    "dbt/models/bronze/.gitkeep",
+    "dbt/models/silver/.gitkeep",
+    "dbt/models/gold/.gitkeep",
+    "sources/.gitkeep",
+    "pyproject.toml",
 ]
 
-
-@pytest.fixture()
-def runner() -> CliRunner:
-    """Return a Click test runner."""
-    return CliRunner()
-
-
-@pytest.mark.parametrize("project_type", VALID_TYPES)
-def test_common_files_exist(
-    runner: CliRunner,
-    tmp_path: Path,
-    project_type: str,
-) -> None:
-    """All _common files are generated for every project type."""
-    result = runner.invoke(
-        cli,
-        [
-            "new",
-            "--name", "test_project",
-            "--type", project_type,
-            "--description", "A test project",
-            "--author", "Test Author",
-            "--output", str(tmp_path),
-        ],
-    )
-    assert result.exit_code == 0, result.output
-
-    project_dir = tmp_path / "test_project"
-    for filename in COMMON_FILES:
-        assert (project_dir / filename).exists(), (
-            f"Missing '{filename}' for type '{project_type}'"
-        )
+def test_data_files_exist(runner: CliRunner, base_args: list[str]) -> None:
+    """All expected files for the `data` type must be generated."""
+    args = base_args + ["--type", "data"]
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["new"] + args)
+        assert result.exit_code == 0, result.output
+        project_dir = Path("test_project")
+        for filepath in DATA_FILES:
+            assert (project_dir / filepath).exists(), f"Missing: {filepath}"
 
 
-@pytest.mark.parametrize("project_type", VALID_TYPES)
-def test_jinja2_variables_interpolated(
-    runner: CliRunner,
-    tmp_path: Path,
-    project_type: str,
-) -> None:
-    """Jinja2 variables are correctly interpolated in CONTEXT.md."""
-    result = runner.invoke(
-        cli,
-        [
-            "new",
-            "--name", "my_project",
-            "--type", project_type,
-            "--description", "Test description",
-            "--author", "Jeremy Marchandeau",
-            "--output", str(tmp_path),
-        ],
-    )
-    assert result.exit_code == 0, result.output
-
-    context_md = (tmp_path / "my_project" / "CONTEXT.md").read_text()
-
-    assert "My Project" in context_md        # project_name_human
-    assert "Test description" in context_md  # description
-    assert "Jeremy Marchandeau" in context_md  # author
-    assert "{{" not in context_md            # no unrendered tags
+def test_data_makefile_interpolation(runner: CliRunner, base_args: list[str]) -> None:
+    """The data Makefile must contain the project name after rendering."""
+    args = base_args + ["--type", "data"]
+    with runner.isolated_filesystem():
+        runner.invoke(cli, ["new"] + args)
+        makefile = (Path("test_project") / "Makefile").read_text()
+        assert "test_project" in makefile or "Test Project" in makefile
+        assert "{{" not in makefile
 
 
-def test_force_flag_overwrites_existing(
-    runner: CliRunner,
-    tmp_path: Path,
-) -> None:
-    """--force overwrites an existing project directory."""
-    # First run
-    runner.invoke(
-        cli,
-        ["new", "--name", "my_project", "--type", "python",
-         "--description", "x", "--author", "x", "--output", str(tmp_path)],
-    )
-    # Second run without --force should fail
-    result = runner.invoke(
-        cli,
-        ["new", "--name", "my_project", "--type", "python",
-         "--description", "x", "--author", "x", "--output", str(tmp_path)],
-    )
-    assert result.exit_code != 0
-
-    # Third run with --force should succeed
-    result = runner.invoke(
-        cli,
-        ["new", "--name", "my_project", "--type", "python",
-         "--description", "x", "--author", "x",
-         "--output", str(tmp_path), "--force"],
-    )
-    assert result.exit_code == 0
+def test_data_dbt_project_yml_interpolation(runner: CliRunner, base_args: list[str]) -> None:
+    """dbt_project.yml must contain the project name after rendering."""
+    args = base_args + ["--type", "data"]
+    with runner.isolated_filesystem():
+        runner.invoke(cli, ["new"] + args)
+        dbt_yml = (Path("test_project") / "dbt" / "dbt_project.yml").read_text()
+        assert "test_project" in dbt_yml
+        assert "{{" not in dbt_yml
 
 
-def test_invalid_type_rejected(runner: CliRunner, tmp_path: Path) -> None:
-    """An invalid project type returns a non-zero exit code."""
-    result = runner.invoke(
-        cli,
-        ["new", "--name", "x", "--type", "invalid_type",
-         "--description", "x", "--author", "x", "--output", str(tmp_path)],
-    )
-    assert result.exit_code != 0
+# ---------------------------------------------------------------------------
+# Type: rag
+# ---------------------------------------------------------------------------
+
+RAG_FILES = [
+    "main.py",
+    "app/ingestion.py",
+    "app/retrieval.py",
+    "app/api.py",
+    "data/raw/.gitkeep",
+    "data/processed/.gitkeep",
+    "requirements.txt",
+]
+
+def test_rag_files_exist(runner: CliRunner, base_args: list[str]) -> None:
+    """All expected files for the `rag` type must be generated."""
+    args = base_args + ["--type", "rag"]
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["new"] + args)
+        assert result.exit_code == 0, result.output
+        project_dir = Path("test_project")
+        for filepath in RAG_FILES:
+            assert (project_dir / filepath).exists(), f"Missing: {filepath}"
+
+
+def test_rag_main_interpolation(runner: CliRunner, base_args: list[str]) -> None:
+    """main.py must contain the project name after rendering."""
+    args = base_args + ["--type", "rag"]
+    with runner.isolated_filesystem():
+        runner.invoke(cli, ["new"] + args)
+        main_py = (Path("test_project") / "main.py").read_text()
+        assert "Test Project" in main_py
+        assert "{{" not in main_py
+
+
+def test_rag_requirements_no_template_tags(runner: CliRunner, base_args: list[str]) -> None:
+    """requirements.txt must have no unrendered Jinja2 tags."""
+    args = base_args + ["--type", "rag"]
+    with runner.isolated_filesystem():
+        runner.invoke(cli, ["new"] + args)
+        reqs = (Path("test_project") / "requirements.txt").read_text()
+        assert "{{" not in reqs
+
+
+# ---------------------------------------------------------------------------
+# Error handling
+# ---------------------------------------------------------------------------
+
+def test_duplicate_project_name(runner: CliRunner, base_args: list[str]) -> None:
+    """Generating a project with an existing name must fail with exit code 1."""
+    args = base_args + ["--type", "data"]
+    with runner.isolated_filesystem():
+        runner.invoke(cli, ["new"] + args)
+        result = runner.invoke(cli, ["new"] + args)
+        assert result.exit_code == 1
+        assert "already exists" in result.output

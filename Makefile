@@ -49,21 +49,3 @@ test:
 
 lint:
 	python -m ruff check scaffold.py
-```
-
----
-
-### 📄 `requirements.txt`
-```
-w2d-scaffold/requirements.txt
-```
-```
-click>=8.1
-jinja2>=3.1
-```
-
----
-
-### 📄 `pyproject.toml`
-```
-w2d-scaffold/pyproject.toml
