@@ -29,11 +29,12 @@ _Last updated: 2026-03-09_
 | **Phase 5 — Polish & release**                             |            |
 | README.md final avec badges CI, exemples, structure        | 2026-03-09 |
 | GitHub Actions CI — ruff + pytest sur push/PR main         | 2026-03-09 |
+| ruff ajouté à requirements.txt                             | 2026-03-09 |
+| LICENSE MIT ajouté au repo                                 | 2026-03-09 |
+| Repo passé en public — v0.2.0 taguée et publiée            | 2026-03-09 |
 
 ## 🔜 To do
 
-| #   | Task                                                   | Priority | Notes                                                 |
-| --- | ------------------------------------------------------ | -------- | ----------------------------------------------------- |
-| 1   | Démo gif ou asciinema pour le README                   | Low      | `asciinema rec` sur `make new` en mode interactif     |
-| 2   | Ajouter `ruff` à `requirements.txt` (requis par la CI) | High     | `ruff>=0.4` — actuellement absent du fichier          |
-| 3   | Ajouter un fichier `LICENSE` (MIT) au repo             | Medium   | Le README et le CDC le mentionnent, le fichier manque |
+| #   | Task                                 | Priority | Notes                                             |
+| --- | ------------------------------------ | -------- | ------------------------------------------------- |
+| 1   | Démo gif ou asciinema pour le README | Low      | `asciinema rec` sur `make new` en mode interactif |
