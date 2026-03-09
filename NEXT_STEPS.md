@@ -21,12 +21,15 @@ _Last updated: 2026-03-09_
 | Template `wordpress-plugin` — plugin.php, includes, assets | 2026-03-09 |
 | Template `wordpress-theme` — Timber, Twig, SCSS, acf-json  | 2026-03-09 |
 | Tests pytest phase 3 (wordpress-plugin + wordpress-theme)  | 2026-03-09 |
+| **Phase 4 — Templates python & astro**                     |            |
+| Template `python` — src/ layout, pyproject.toml, tests/    | 2026-03-09 |
+| Tests pytest phase 4a (python)                             | 2026-03-09 |
+| Template `astro` — Astro v5, Tailwind v4, SolidJS, Giscus  | 2026-03-09 |
 
 ## 🔜 To do
 
-| #   | Task                                           | Priority | Notes                                                 |
-| --- | ---------------------------------------------- | -------- | ----------------------------------------------------- |
-| 1   | Phase 4 — Template `python`                    | Medium   | src/ layout, pyproject.toml, tests/                   |
-| 2   | Phase 4 — Template `astro`                     | Medium   | Astro v5 + Tailwind v4 + SolidJS + Giscus + astro-seo |
-| 3   | Phase 5 — README.md final + démo gif/asciinema | Low      |                                                       |
-| 4   | Phase 5 — GitHub Actions (ruff + pytest)       | Low      | .github/workflows/ci.yml                              |
+| #   | Task                                           | Priority | Notes                              |
+| --- | ---------------------------------------------- | -------- | ---------------------------------- |
+| 1   | Tests pytest phase 4b (astro)                  | High     | Vérifier tous les fichiers générés |
+| 2   | Phase 5 — README.md final + démo gif/asciinema | Low      |                                    |
+| 3   | Phase 5 — GitHub Actions (ruff + pytest)       | Low      | .github/workflows/ci.yml           |

@@ -9,6 +9,8 @@ from click.testing import CliRunner
 
 from scaffold import cli
 
+import re
+JINJA2_TAG_RE = re.compile(r"\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\}\}")
 
 # ---------------------------------------------------------------------------
 # Shared test fixtures
@@ -338,3 +340,294 @@ class TestWordpressThemeTemplate:
         content = functions_php.read_text()
         assert "Timber\\Timber::init()" in content
         assert "acf-json" in content
+
+
+# =============================================================================
+# Phase 4a: python template
+# =============================================================================
+
+class TestPythonTemplate:
+    """Tests for the `python` project type."""
+
+    def test_python_expected_files(self, tmp_path: Path) -> None:
+        """All expected files are generated for a python project."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_lib",
+                "--type", "python",
+                "--description", "A typed Python library",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        project_dir = tmp_path / "my_lib"
+
+        expected = [
+            # Common scaffold
+            "CONTEXT.md",
+            "NEXT_STEPS.md",
+            "STRUCTURE.md",
+            "DECISIONS.md",
+            "README.md",
+            ".gitignore",
+            ".env.example",
+            # Python-specific
+            "src/my_lib/__init__.py",
+            "src/my_lib/main.py",
+            "tests/test_main.py",
+            "pyproject.toml",
+        ]
+
+        for relative_path in expected:
+            target = project_dir / relative_path
+            assert target.exists(), f"Missing: {relative_path}"
+
+    def test_python_jinja2_interpolation(self, tmp_path: Path) -> None:
+        """Jinja2 variables are correctly rendered in Python-specific files."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_lib",
+                "--type", "python",
+                "--description", "A typed Python library",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_lib"
+
+        # pyproject.toml must contain the project name and description
+        pyproject = (project_dir / "pyproject.toml").read_text()
+        assert "my_lib" in pyproject
+        assert "A typed Python library" in pyproject
+
+        # main.py must reference the human name
+        main_py = (project_dir / "src/my_lib/main.py").read_text()
+        assert "My Lib" in main_py
+
+        # test file must import from the package
+        test_py = (project_dir / "tests/test_main.py").read_text()
+        assert "from my_lib.main import main" in test_py
+
+    def test_python_no_jinja2_tags_remaining(self, tmp_path: Path) -> None:
+        """No unrendered Jinja2 tags remain in any generated file."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_lib",
+                "--type", "python",
+                "--description", "A typed Python library",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_lib"
+
+        for file_path in project_dir.rglob("*"):
+            if file_path.is_file():
+                content = file_path.read_text(errors="ignore")
+                assert "{{" not in content, (
+                    f"Unrendered Jinja2 tag in: {file_path.relative_to(project_dir)}"
+                )
+
+# =============================================================================
+# Phase 4b: astro template
+# =============================================================================
+
+class TestAstroTemplate:
+    """Tests for the `astro` project type."""
+
+    def test_astro_expected_files(self, tmp_path: Path) -> None:
+        """All expected files are generated for an astro project."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_blog",
+                "--type", "astro",
+                "--description", "Test blog",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        project_dir = tmp_path / "my_blog"
+
+        expected = [
+            # Common scaffold
+            "CONTEXT.md",
+            "NEXT_STEPS.md",
+            "STRUCTURE.md",
+            "DECISIONS.md",
+            "README.md",
+            ".gitignore",
+            ".env.example",
+            # Astro-specific
+            "astro.config.mjs",
+            "package.json",
+            "tsconfig.json",
+            "src/consts.ts",
+            "src/styles/global.css",
+            "src/layouts/BaseLayout.astro",
+            "src/layouts/PostLayout.astro",
+            "src/layouts/ListLayout.astro",
+            "src/pages/index.astro",
+            "src/pages/blog/[...slug].astro",
+            "src/components/solidjs/ThemeToggle.tsx",
+            "src/components/solidjs/MobileNav.tsx",
+            "src/components/solidjs/GiscusComments.tsx",
+            "src/content/blog/hello-world.mdx",
+            "src/content/authors/my_blog.mdx",
+            "src/content/tags/general.mdx",
+        ]
+
+        for relative_path in expected:
+            target = project_dir / relative_path
+            assert target.exists(), f"Missing: {relative_path}"
+
+    def test_astro_jinja2_interpolation(self, tmp_path: Path) -> None:
+        """Jinja2 variables are correctly rendered in Astro-specific files."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_blog",
+                "--type", "astro",
+                "--description", "Test blog",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_blog"
+
+        # consts.ts must contain human name, description and author
+        consts = (project_dir / "src/consts.ts").read_text()
+        assert "My Blog" in consts
+        assert "Test blog" in consts
+        assert "Test Author" in consts
+
+        # package.json must contain the snake_case project name
+        package_json = (project_dir / "package.json").read_text()
+        assert "my_blog" in package_json
+
+class TestAstroTemplate:
+    """Tests for the `astro` project type."""
+
+    def test_astro_expected_files(self, tmp_path: Path) -> None:
+        """All expected files are generated for an astro project."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_blog",
+                "--type", "astro",
+                "--description", "Test blog",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        project_dir = tmp_path / "my_blog"
+
+        expected = [
+            "CONTEXT.md",
+            "NEXT_STEPS.md",
+            "STRUCTURE.md",
+            "DECISIONS.md",
+            "README.md",
+            ".gitignore",
+            ".env.example",
+            "astro.config.mjs",
+            "package.json",
+            "tsconfig.json",
+            "src/consts.ts",
+            "src/styles/global.css",
+            "src/layouts/BaseLayout.astro",
+            "src/layouts/PostLayout.astro",
+            "src/layouts/ListLayout.astro",
+            "src/pages/index.astro",
+            "src/pages/blog/[...slug].astro",
+            "src/components/solidjs/ThemeToggle.tsx",
+            "src/components/solidjs/MobileNav.tsx",
+            "src/components/solidjs/GiscusComments.tsx",
+            "src/content/blog/hello-world.mdx",
+            "src/content/authors/my_blog.mdx",
+            "src/content/tags/general.mdx",
+        ]
+
+        for relative_path in expected:
+            target = project_dir / relative_path
+            assert target.exists(), f"Missing: {relative_path}"
+
+    def test_astro_jinja2_interpolation(self, tmp_path: Path) -> None:
+        """Jinja2 variables are correctly rendered in Astro-specific files."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_blog",
+                "--type", "astro",
+                "--description", "Test blog",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_blog"
+
+        consts = (project_dir / "src/consts.ts").read_text()
+        assert "My Blog" in consts
+        assert "Test blog" in consts
+        assert "Test Author" in consts
+
+        package_json = (project_dir / "package.json").read_text()
+        assert "my_blog" in package_json
+
+    def test_astro_no_jinja2_tags_remaining(self, tmp_path: Path) -> None:
+        """No unrendered Jinja2 tags remain in any generated file.
+
+        Note: {{ }} in .astro/.tsx/.ts files is valid JSX/Astro syntax
+        (e.g. openGraph={{ basic: {...} }}). We only flag {{ identifier }}
+        patterns that look like unrendered Jinja2 variables.
+        """
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_blog",
+                "--type", "astro",
+                "--description", "Test blog",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_blog"
+
+        for file_path in project_dir.rglob("*"):
+            if file_path.is_file():
+                content = file_path.read_text(errors="ignore")
+                match = JINJA2_TAG_RE.search(content)
+                assert match is None, (
+                    f"Unrendered Jinja2 tag '{match.group()}' in: "
+                    f"{file_path.relative_to(project_dir)}"
+                )

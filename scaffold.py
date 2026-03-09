@@ -6,7 +6,8 @@
 #   Template files whose output name depends on project_name use the
 #   literal placeholder "PROJECT_NAME" in their filename (e.g.
 #   PROJECT_NAME.php.j2). scaffold.py replaces this placeholder with
-#   the actual project_name at copy time.
+#   the actual project_name at copy time. The same logic applies to
+#   directory names (e.g. src/PROJECT_NAME/ → src/my_lib/).
 #   See DECISIONS.md — "Dynamic template filenames".
 
 import re
@@ -70,25 +71,56 @@ def to_human(name: str) -> str:
     return name.replace("_", " ").replace("-", " ").title()
 
 
+# Placeholders used in template filenames and directory names.
+FILENAME_PLACEHOLDER = "PROJECT_NAME"
+SLUG_PLACEHOLDER = "PROJECT_SLUG"
+SLUG_ROUTE_PLACEHOLDER = "SLUG_ROUTE"
+
+
 def resolve_output_filename(filename: str, project_name: str) -> str:
     """
-    Replace dynamic placeholders in a template filename with actual values.
+    Replace dynamic placeholders in a single path segment with actual values.
 
     Supported placeholders:
         PROJECT_NAME → project_name          (snake_case, e.g. my_plugin)
-        PROJECT_SLUG → project_name kebab    (kebab-case, e.g. my-plugin)
+        PROJECT_SLUG → kebab-case slug       (e.g. my-plugin)
+        SLUG_ROUTE   → [...slug]             (Astro catch-all route syntax)
 
     Args:
-        filename:     Template filename (with .j2 already stripped).
+        filename:     A single path segment (filename or directory name),
+                      with the .j2 suffix already stripped if applicable.
         project_name: snake_case project name.
 
     Returns:
-        Final output filename with placeholders resolved.
+        Resolved segment with placeholders replaced.
     """
     slug = project_name.replace("_", "-")
     filename = filename.replace(FILENAME_PLACEHOLDER, project_name)
     filename = filename.replace(SLUG_PLACEHOLDER, slug)
+    filename = filename.replace(SLUG_ROUTE_PLACEHOLDER, "[...slug]")
     return filename
+
+
+def resolve_output_path(relative: Path, project_name: str) -> Path:
+    """
+    Resolve PROJECT_NAME and PROJECT_SLUG placeholders in every segment of a
+    relative path, including intermediate directory names.
+
+    Example:
+        src/PROJECT_NAME/main.py → src/my_lib/main.py
+
+    Args:
+        relative:     Relative path from the type template directory, with the
+                      .j2 suffix already stripped from the final segment.
+        project_name: snake_case project name used to replace placeholders.
+
+    Returns:
+        Fully resolved relative Path with all placeholders replaced.
+    """
+    resolved_parts = [
+        resolve_output_filename(part, project_name) for part in relative.parts
+    ]
+    return Path(*resolved_parts)
 
 
 def render_template(template_path: Path, context: dict) -> str:
@@ -129,10 +161,11 @@ def copy_common_templates(output_dir: Path, context: dict) -> None:
 def copy_type_templates(output_dir: Path, project_type: str, context: dict) -> None:
     """
     Render and copy all type-specific templates into the output directory,
-    preserving subdirectory structure.
+    preserving and resolving subdirectory structure.
 
-    Template filenames may contain dynamic placeholders (PROJECT_NAME,
-    PROJECT_SLUG) which are resolved via resolve_output_filename().
+    Both directory names and file names may contain dynamic placeholders
+    (PROJECT_NAME, PROJECT_SLUG). All segments of the relative path are
+    resolved via resolve_output_path() before writing.
 
     Args:
         output_dir:   Target project directory.
@@ -151,18 +184,22 @@ def copy_type_templates(output_dir: Path, project_type: str, context: dict) -> N
 
         relative = item.relative_to(type_dir)
 
-        # Build output path: strip .j2 suffix, resolve name placeholders.
+        # Strip .j2 from the final segment before resolving placeholders.
         parts = list(relative.parts)
-        bare_name = parts[-1].removesuffix(".j2")
-        parts[-1] = resolve_output_filename(bare_name, project_name)
-        output_path = output_dir / Path(*parts)
+        parts[-1] = parts[-1].removesuffix(".j2")
+        stripped_relative = Path(*parts)
+
+        # Resolve PROJECT_NAME / PROJECT_SLUG in every path segment.
+        resolved_relative = resolve_output_path(stripped_relative, project_name)
+
+        output_path = output_dir / resolved_relative
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if item.suffix == ".j2":
             rendered = render_template(item, context)
             output_path.write_text(rendered, encoding="utf-8")
         else:
-            # Non-template files (e.g. .gitkeep) are copied as-is
+            # Non-template files (e.g. .gitkeep) are copied as-is.
             shutil.copy2(item, output_path)
 
 
