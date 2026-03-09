@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "w2d-scaffold"
+version = "0.2.0"
+description = "Opinionated CLI scaffolding tool for LLM-assisted project workflows"
+readme = "README.md"
+licence = {text = "MIT"}
+authors = [
+    {name = "Jeremy Marchandeau"}
+]
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1",
+    "jinja2>=3.1",
+]
+
+[project.scripts]
+w2d-scaffold = "scaffold:cli"
+
+[project.urls]
+Homepage = "https://github.com/jeremy6680/w2d-scaffold"
+Repository = "https://github.com/jeremy6680/w2d-scaffold"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
