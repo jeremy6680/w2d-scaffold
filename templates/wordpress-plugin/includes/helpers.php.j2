@@ -1,0 +1,22 @@
+<?php
+/**
+ * Helper functions for {{ project_name_human }}.
+ *
+ * Pure utility functions — no side effects, no globals.
+ *
+ * @package {{ project_name_human | replace(" ", "_") }}
+ */
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
+ * Return the plugin's version string.
+ *
+ * @return string
+ */
+function {{ project_name }}_get_version(): string {
+    return {{ project_name | upper }}_VERSION;
+}

@@ -1,0 +1,27 @@
+<?php
+/**
+ * Archive template for {{ project_name_human }}.
+ *
+ * @package {{ project_name_human | replace(" ", "_") }}
+ */
+
+get_header(); ?>
+
+<main id="main" class="{{ project_name | replace("_", "-") }}-archive">
+    <h1><?php the_archive_title(); ?></h1>
+
+    <?php if ( have_posts() ) : ?>
+        <ul class="{{ project_name | replace("_", "-") }}-list">
+            <?php while ( have_posts() ) : the_post(); ?>
+                <li>
+                    <a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
+                </li>
+            <?php endwhile; ?>
+        </ul>
+        <?php the_posts_navigation(); ?>
+    <?php else : ?>
+        <p><?php esc_html_e( 'No results found.', '{{ project_name | replace("_", "-") }}' ); ?></p>
+    <?php endif; ?>
+</main>
+
+<?php get_footer();

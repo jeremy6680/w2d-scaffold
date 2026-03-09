@@ -1,0 +1,53 @@
+// ─── Main stylesheet — {{ project_name_human }} ─────────────────
+// Generated: {{ date }}
+// Author:    {{ author }}
+//
+// Import order matters: variables → mixins → base → components.
+
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// ─── Reset / Base ────────────────────────────────────────────────
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: $font-primary;
+    font-size: $font-size-base;
+    line-height: $line-height;
+    color: $color-text;
+    background-color: $color-bg;
+}
+
+img,
+video {
+    max-width: 100%;
+    height: auto;
+}
+
+a {
+    color: $color-accent;
+
+    &:hover,
+    &:focus-visible {
+        text-decoration: underline;
+        outline: 2px solid $color-accent;
+        outline-offset: 2px;
+    }
+}
+
+// ─── Layout ──────────────────────────────────────────────────────
+#main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: $spacing-md;
+
+    @include respond-to('lg') {
+        padding: $spacing-lg;
+    }
+}

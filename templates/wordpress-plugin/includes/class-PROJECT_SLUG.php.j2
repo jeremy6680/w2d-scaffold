@@ -1,0 +1,75 @@
+<?php
+/**
+ * Main plugin class for {{ project_name_human }}.
+ *
+ * Handles singleton instantiation, hook registration,
+ * and asset enqueueing.
+ *
+ * @package {{ project_name_human | replace(" ", "_") }}
+ */
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
+ * Class {{ project_name | replace("_", " ") | title | replace(" ", "_") }}
+ */
+class {{ project_name | replace("_", " ") | title | replace(" ", "") }} {
+
+    /** @var self|null Singleton instance. */
+    private static ?self $instance = null;
+
+    /**
+     * Return or create the singleton instance.
+     *
+     * @return self
+     */
+    public static function get_instance(): self {
+        if ( null === self::$instance ) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    /**
+     * Constructor — register hooks.
+     */
+    private function __construct() {
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+        add_action( 'init', [ $this, 'register_post_types' ] );
+    }
+
+    /**
+     * Enqueue front-end styles and scripts.
+     *
+     * @return void
+     */
+    public function enqueue_assets(): void {
+        wp_enqueue_style(
+            '{{ project_name | replace("_", "-") }}-style',
+            {{ project_name | upper }}_URL . 'assets/css/main.css',
+            [],
+            {{ project_name | upper }}_VERSION
+        );
+
+        wp_enqueue_script(
+            '{{ project_name | replace("_", "-") }}-script',
+            {{ project_name | upper }}_URL . 'assets/js/main.js',
+            [],
+            {{ project_name | upper }}_VERSION,
+            true
+        );
+    }
+
+    /**
+     * Register custom post types.
+     * Add your CPTs here.
+     *
+     * @return void
+     */
+    public function register_post_types(): void {
+        // TODO: register_post_type( '...', [...] );
+    }
+}

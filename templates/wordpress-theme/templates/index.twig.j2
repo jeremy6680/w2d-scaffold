@@ -1,0 +1,22 @@
+{#
+  index.twig — Blog index for {{ project_name_human }}
+  Generated: {{ date }}
+#}
+{% raw %}{% extends 'base.twig' %}
+
+{% block content %}
+    <h1>{{ site.name }}</h1>
+
+    {% if posts %}
+        <ul class="post-list">
+            {% for post in posts %}
+                <li>
+                    <a href="{{ post.link }}">{{ post.title }}</a>
+                    <time datetime="{{ post.date('Y-m-d') }}">{{ post.date }}</time>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No posts found.</p>
+    {% endif %}
+{% endblock %}{% endraw %}

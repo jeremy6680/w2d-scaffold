@@ -1,0 +1,15 @@
+{#
+  single.twig — Single post template for {{ project_name_human }}
+  Generated: {{ date }}
+#}
+{% raw %}{% extends 'base.twig' %}
+
+{% block content %}
+    <article class="post post-{{ post.ID }}">
+        <h1>{{ post.title }}</h1>
+        <time datetime="{{ post.date('Y-m-d') }}">{{ post.date }}</time>
+        <div class="post-content">
+            {{ post.content }}
+        </div>
+    </article>
+{% endblock %}{% endraw %}

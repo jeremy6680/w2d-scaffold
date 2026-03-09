@@ -1,6 +1,13 @@
 # scaffold.py — w2d-scaffold
 # Main CLI entrypoint. Handles project generation via Click commands.
 # Uses Jinja2 to render templates from the templates/ directory.
+#
+# Dynamic filename convention:
+#   Template files whose output name depends on project_name use the
+#   literal placeholder "PROJECT_NAME" in their filename (e.g.
+#   PROJECT_NAME.php.j2). scaffold.py replaces this placeholder with
+#   the actual project_name at copy time.
+#   See DECISIONS.md — "Dynamic template filenames".
 
 import re
 import shutil
@@ -21,6 +28,14 @@ VALID_TYPES = [
 ]
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# Placeholder used in template filenames to represent {{ project_name }}.
+# e.g. PROJECT_NAME.php.j2 → my_plugin.php
+FILENAME_PLACEHOLDER = "PROJECT_NAME"
+
+# Placeholder used in template filenames to represent the kebab-case slug.
+# e.g. class-PROJECT_SLUG.php.j2 → class-my-plugin.php
+SLUG_PLACEHOLDER = "PROJECT_SLUG"
 
 
 def slugify(name: str) -> str:
@@ -53,6 +68,27 @@ def to_human(name: str) -> str:
         Title Case string for display purposes.
     """
     return name.replace("_", " ").replace("-", " ").title()
+
+
+def resolve_output_filename(filename: str, project_name: str) -> str:
+    """
+    Replace dynamic placeholders in a template filename with actual values.
+
+    Supported placeholders:
+        PROJECT_NAME → project_name          (snake_case, e.g. my_plugin)
+        PROJECT_SLUG → project_name kebab    (kebab-case, e.g. my-plugin)
+
+    Args:
+        filename:     Template filename (with .j2 already stripped).
+        project_name: snake_case project name.
+
+    Returns:
+        Final output filename with placeholders resolved.
+    """
+    slug = project_name.replace("_", "-")
+    filename = filename.replace(FILENAME_PLACEHOLDER, project_name)
+    filename = filename.replace(SLUG_PLACEHOLDER, slug)
+    return filename
 
 
 def render_template(template_path: Path, context: dict) -> str:
@@ -95,14 +131,19 @@ def copy_type_templates(output_dir: Path, project_type: str, context: dict) -> N
     Render and copy all type-specific templates into the output directory,
     preserving subdirectory structure.
 
+    Template filenames may contain dynamic placeholders (PROJECT_NAME,
+    PROJECT_SLUG) which are resolved via resolve_output_filename().
+
     Args:
-        output_dir: Target project directory.
+        output_dir:   Target project directory.
         project_type: One of the VALID_TYPES strings.
-        context: Jinja2 rendering context.
+        context:      Jinja2 rendering context.
     """
     type_dir = TEMPLATES_DIR / project_type
     if not type_dir.exists():
         return
+
+    project_name: str = context["project_name"]
 
     for item in sorted(type_dir.rglob("*")):
         if item.is_dir():
@@ -110,9 +151,10 @@ def copy_type_templates(output_dir: Path, project_type: str, context: dict) -> N
 
         relative = item.relative_to(type_dir)
 
-        # Remove .j2 extension from output filename if present
+        # Build output path: strip .j2 suffix, resolve name placeholders.
         parts = list(relative.parts)
-        parts[-1] = parts[-1].removesuffix(".j2")
+        bare_name = parts[-1].removesuffix(".j2")
+        parts[-1] = resolve_output_filename(bare_name, project_name)
         output_path = output_dir / Path(*parts)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -135,11 +177,11 @@ def generate_project(
     Orchestrate the full project generation: render common + type-specific templates.
 
     Args:
-        name: Raw project name (will be slugified).
+        name:         Raw project name (will be slugified).
         project_type: One of the VALID_TYPES strings.
-        description: Short project description.
-        author: Author full name.
-        output_base: Directory where the new project folder will be created.
+        description:  Short project description.
+        author:       Author full name.
+        output_base:  Directory where the new project folder will be created.
 
     Returns:
         Path to the generated project directory.
@@ -191,11 +233,18 @@ def cli() -> None:
 )
 @click.option("--description", "-d", default="", help="Short project description")
 @click.option("--author", "-a", default="", help="Author name")
+@click.option(
+    "--output-dir",
+    "-o",
+    default=None,
+    help="Directory where the project will be created (default: current directory)",
+)
 def new(
     name: str | None,
     project_type: str | None,
     description: str,
     author: str,
+    output_dir: str | None,
 ) -> None:
     """
     Generate a new project structure.
@@ -217,17 +266,17 @@ def new(
     if not author:
         author = click.prompt("Author", default="")
 
-    output_base = Path.cwd()
+    output_base = Path(output_dir) if output_dir else Path.cwd()
 
     try:
-        output_dir = generate_project(
+        generated = generate_project(
             name=name,
             project_type=project_type,
             description=description,
             author=author,
             output_base=output_base,
         )
-        click.echo(f"✅ Project '{output_dir.name}' created at {output_dir}")
+        click.echo(f"✅ Project '{generated.name}' created at {generated}")
     except FileExistsError as e:
         click.echo(f"❌ {e}", err=True)
         raise SystemExit(1)

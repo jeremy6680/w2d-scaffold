@@ -1,0 +1,23 @@
+/**
+ * {{ project_name_human }} — Main script
+ * Generated: {{ date }}
+ * Author:    {{ author }}
+ *
+ * Vanilla JS only — no framework dependency.
+ */
+
+( function () {
+    'use strict';
+
+    // ─── Mobile navigation toggle ────────────────────────────────
+    const navToggle = document.querySelector( '.nav-toggle' );
+    const navMenu   = document.querySelector( '.nav-menu' );
+
+    if ( navToggle && navMenu ) {
+        navToggle.addEventListener( 'click', function () {
+            const isExpanded = navToggle.getAttribute( 'aria-expanded' ) === 'true';
+            navToggle.setAttribute( 'aria-expanded', String( ! isExpanded ) );
+            navMenu.hidden = isExpanded;
+        } );
+    }
+} )();
