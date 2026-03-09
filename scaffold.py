@@ -254,7 +254,10 @@ def generate_project(
 
 @click.group()
 def cli() -> None:
-    """w2d-scaffold — Generate opinionated project structures for LLM-assisted workflows."""
+    """w2d-scaffold — Generate opinionated project structures.
+
+    Designed for LLM-assisted workflows.
+    """
     pass
 
 

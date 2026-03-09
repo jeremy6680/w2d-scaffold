@@ -2,8 +2,8 @@
 # pytest test suite: verifies that each project type generates the expected
 # files and that Jinja2 variables are correctly interpolated.
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
