@@ -25,11 +25,15 @@ _Last updated: 2026-03-09_
 | Template `python` — src/ layout, pyproject.toml, tests/    | 2026-03-09 |
 | Tests pytest phase 4a (python)                             | 2026-03-09 |
 | Template `astro` — Astro v5, Tailwind v4, SolidJS, Giscus  | 2026-03-09 |
+| Tests pytest phase 4b (astro) — classe dupliquée fusionnée | 2026-03-09 |
+| **Phase 5 — Polish & release**                             |            |
+| README.md final avec badges CI, exemples, structure        | 2026-03-09 |
+| GitHub Actions CI — ruff + pytest sur push/PR main         | 2026-03-09 |
 
 ## 🔜 To do
 
-| #   | Task                                           | Priority | Notes                              |
-| --- | ---------------------------------------------- | -------- | ---------------------------------- |
-| 1   | Tests pytest phase 4b (astro)                  | High     | Vérifier tous les fichiers générés |
-| 2   | Phase 5 — README.md final + démo gif/asciinema | Low      |                                    |
-| 3   | Phase 5 — GitHub Actions (ruff + pytest)       | Low      | .github/workflows/ci.yml           |
+| #   | Task                                                   | Priority | Notes                                                 |
+| --- | ------------------------------------------------------ | -------- | ----------------------------------------------------- |
+| 1   | Démo gif ou asciinema pour le README                   | Low      | `asciinema rec` sur `make new` en mode interactif     |
+| 2   | Ajouter `ruff` à `requirements.txt` (requis par la CI) | High     | `ruff>=0.4` — actuellement absent du fichier          |
+| 3   | Ajouter un fichier `LICENSE` (MIT) au repo             | Medium   | Le README et le CDC le mentionnent, le fichier manque |

@@ -3,18 +3,23 @@
 # files and that Jinja2 variables are correctly interpolated.
 
 from pathlib import Path
+import re
 
 import pytest
 from click.testing import CliRunner
 
 from scaffold import cli
 
-import re
+# Matches unrendered Jinja2 variable tags: {{ identifier }}
+# Deliberately excludes {{ }} (empty braces) and {{ { } }} (JSX/Astro object
+# spread syntax) which are valid in .astro / .tsx / .ts files.
 JINJA2_TAG_RE = re.compile(r"\{\{\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\}\}")
 
+
 # ---------------------------------------------------------------------------
-# Shared test fixtures
+# Shared fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def runner() -> CliRunner:
@@ -33,18 +38,7 @@ def base_args() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def invoke_new(runner: CliRunner, args: list[str]) -> object:
-    """Invoke the `new` subcommand inside a temporary isolated filesystem."""
-    with runner.isolated_filesystem():
-        result = runner.invoke(cli, ["new"] + args)
-        yield result, Path("test_project")
-
-
-# ---------------------------------------------------------------------------
-# Common files (all types)
+# Common files — all types
 # ---------------------------------------------------------------------------
 
 COMMON_FILES = [
@@ -57,6 +51,7 @@ COMMON_FILES = [
     ".env.example",
 ]
 
+
 @pytest.mark.parametrize("project_type", [
     "data",
     "rag",
@@ -65,7 +60,9 @@ COMMON_FILES = [
     "wordpress-theme",
     "astro",
 ])
-def test_common_files_exist(runner: CliRunner, base_args: list[str], project_type: str) -> None:
+def test_common_files_exist(
+    runner: CliRunner, base_args: list[str], project_type: str
+) -> None:
     """All common LLM pilot files must be present for every project type."""
     args = base_args + ["--type", project_type]
     with runner.isolated_filesystem():
@@ -84,7 +81,9 @@ def test_common_files_exist(runner: CliRunner, base_args: list[str], project_typ
     "wordpress-theme",
     "astro",
 ])
-def test_jinja2_interpolation(runner: CliRunner, base_args: list[str], project_type: str) -> None:
+def test_jinja2_interpolation(
+    runner: CliRunner, base_args: list[str], project_type: str
+) -> None:
     """Jinja2 variables must be correctly rendered in CONTEXT.md."""
     args = base_args + ["--type", project_type]
     with runner.isolated_filesystem():
@@ -111,6 +110,7 @@ DATA_FILES = [
     "pyproject.toml",
 ]
 
+
 def test_data_files_exist(runner: CliRunner, base_args: list[str]) -> None:
     """All expected files for the `data` type must be generated."""
     args = base_args + ["--type", "data"]
@@ -132,7 +132,9 @@ def test_data_makefile_interpolation(runner: CliRunner, base_args: list[str]) ->
         assert "{{" not in makefile
 
 
-def test_data_dbt_project_yml_interpolation(runner: CliRunner, base_args: list[str]) -> None:
+def test_data_dbt_project_yml_interpolation(
+    runner: CliRunner, base_args: list[str]
+) -> None:
     """dbt_project.yml must contain the project name after rendering."""
     args = base_args + ["--type", "data"]
     with runner.isolated_filesystem():
@@ -156,6 +158,7 @@ RAG_FILES = [
     "requirements.txt",
 ]
 
+
 def test_rag_files_exist(runner: CliRunner, base_args: list[str]) -> None:
     """All expected files for the `rag` type must be generated."""
     args = base_args + ["--type", "rag"]
@@ -177,7 +180,9 @@ def test_rag_main_interpolation(runner: CliRunner, base_args: list[str]) -> None
         assert "{{" not in main_py
 
 
-def test_rag_requirements_no_template_tags(runner: CliRunner, base_args: list[str]) -> None:
+def test_rag_requirements_no_template_tags(
+    runner: CliRunner, base_args: list[str]
+) -> None:
     """requirements.txt must have no unrendered Jinja2 tags."""
     args = base_args + ["--type", "rag"]
     with runner.isolated_filesystem():
@@ -190,6 +195,7 @@ def test_rag_requirements_no_template_tags(runner: CliRunner, base_args: list[st
 # Error handling
 # ---------------------------------------------------------------------------
 
+
 def test_duplicate_project_name(runner: CliRunner, base_args: list[str]) -> None:
     """Generating a project with an existing name must fail with exit code 1."""
     args = base_args + ["--type", "data"]
@@ -200,7 +206,10 @@ def test_duplicate_project_name(runner: CliRunner, base_args: list[str]) -> None
         assert "already exists" in result.output
 
 
-# ─── Phase 3 — WordPress templates ───────────────────────────────
+# ---------------------------------------------------------------------------
+# Phase 3 — WordPress templates
+# ---------------------------------------------------------------------------
+
 
 class TestWordpressPluginTemplate:
     """Tests for the wordpress-plugin project type."""
@@ -342,9 +351,10 @@ class TestWordpressThemeTemplate:
         assert "acf-json" in content
 
 
-# =============================================================================
-# Phase 4a: python template
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Phase 4a — python template
+# ---------------------------------------------------------------------------
+
 
 class TestPythonTemplate:
     """Tests for the `python` project type."""
@@ -366,9 +376,7 @@ class TestPythonTemplate:
         assert result.exit_code == 0, result.output
 
         project_dir = tmp_path / "my_lib"
-
         expected = [
-            # Common scaffold
             "CONTEXT.md",
             "NEXT_STEPS.md",
             "STRUCTURE.md",
@@ -376,16 +384,13 @@ class TestPythonTemplate:
             "README.md",
             ".gitignore",
             ".env.example",
-            # Python-specific
             "src/my_lib/__init__.py",
             "src/my_lib/main.py",
             "tests/test_main.py",
             "pyproject.toml",
         ]
-
         for relative_path in expected:
-            target = project_dir / relative_path
-            assert target.exists(), f"Missing: {relative_path}"
+            assert (project_dir / relative_path).exists(), f"Missing: {relative_path}"
 
     def test_python_jinja2_interpolation(self, tmp_path: Path) -> None:
         """Jinja2 variables are correctly rendered in Python-specific files."""
@@ -401,19 +406,15 @@ class TestPythonTemplate:
                 "--output-dir", str(tmp_path),
             ],
         )
-
         project_dir = tmp_path / "my_lib"
 
-        # pyproject.toml must contain the project name and description
         pyproject = (project_dir / "pyproject.toml").read_text()
         assert "my_lib" in pyproject
         assert "A typed Python library" in pyproject
 
-        # main.py must reference the human name
         main_py = (project_dir / "src/my_lib/main.py").read_text()
         assert "My Lib" in main_py
 
-        # test file must import from the package
         test_py = (project_dir / "tests/test_main.py").read_text()
         assert "from my_lib.main import main" in test_py
 
@@ -431,9 +432,7 @@ class TestPythonTemplate:
                 "--output-dir", str(tmp_path),
             ],
         )
-
         project_dir = tmp_path / "my_lib"
-
         for file_path in project_dir.rglob("*"):
             if file_path.is_file():
                 content = file_path.read_text(errors="ignore")
@@ -441,9 +440,11 @@ class TestPythonTemplate:
                     f"Unrendered Jinja2 tag in: {file_path.relative_to(project_dir)}"
                 )
 
-# =============================================================================
-# Phase 4b: astro template
-# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Phase 4b — astro template
+# ---------------------------------------------------------------------------
+
 
 class TestAstroTemplate:
     """Tests for the `astro` project type."""
@@ -465,7 +466,6 @@ class TestAstroTemplate:
         assert result.exit_code == 0, result.output
 
         project_dir = tmp_path / "my_blog"
-
         expected = [
             # Common scaffold
             "CONTEXT.md",
@@ -485,18 +485,18 @@ class TestAstroTemplate:
             "src/layouts/PostLayout.astro",
             "src/layouts/ListLayout.astro",
             "src/pages/index.astro",
+            # SLUG_ROUTE.astro.j2 → [...slug].astro (resolved by scaffold.py)
             "src/pages/blog/[...slug].astro",
             "src/components/solidjs/ThemeToggle.tsx",
             "src/components/solidjs/MobileNav.tsx",
             "src/components/solidjs/GiscusComments.tsx",
             "src/content/blog/hello-world.mdx",
+            # PROJECT_NAME.mdx.j2 → my_blog.mdx (resolved by scaffold.py)
             "src/content/authors/my_blog.mdx",
             "src/content/tags/general.mdx",
         ]
-
         for relative_path in expected:
-            target = project_dir / relative_path
-            assert target.exists(), f"Missing: {relative_path}"
+            assert (project_dir / relative_path).exists(), f"Missing: {relative_path}"
 
     def test_astro_jinja2_interpolation(self, tmp_path: Path) -> None:
         """Jinja2 variables are correctly rendered in Astro-specific files."""
@@ -512,101 +512,24 @@ class TestAstroTemplate:
                 "--output-dir", str(tmp_path),
             ],
         )
-
         project_dir = tmp_path / "my_blog"
 
-        # consts.ts must contain human name, description and author
+        # consts.ts: single config entry point — must carry all three values
         consts = (project_dir / "src/consts.ts").read_text()
         assert "My Blog" in consts
         assert "Test blog" in consts
         assert "Test Author" in consts
 
-        # package.json must contain the snake_case project name
-        package_json = (project_dir / "package.json").read_text()
-        assert "my_blog" in package_json
-
-class TestAstroTemplate:
-    """Tests for the `astro` project type."""
-
-    def test_astro_expected_files(self, tmp_path: Path) -> None:
-        """All expected files are generated for an astro project."""
-        runner = CliRunner()
-        result = runner.invoke(
-            cli,
-            [
-                "new",
-                "--name", "my_blog",
-                "--type", "astro",
-                "--description", "Test blog",
-                "--author", "Test Author",
-                "--output-dir", str(tmp_path),
-            ],
-        )
-        assert result.exit_code == 0, result.output
-
-        project_dir = tmp_path / "my_blog"
-
-        expected = [
-            "CONTEXT.md",
-            "NEXT_STEPS.md",
-            "STRUCTURE.md",
-            "DECISIONS.md",
-            "README.md",
-            ".gitignore",
-            ".env.example",
-            "astro.config.mjs",
-            "package.json",
-            "tsconfig.json",
-            "src/consts.ts",
-            "src/styles/global.css",
-            "src/layouts/BaseLayout.astro",
-            "src/layouts/PostLayout.astro",
-            "src/layouts/ListLayout.astro",
-            "src/pages/index.astro",
-            "src/pages/blog/[...slug].astro",
-            "src/components/solidjs/ThemeToggle.tsx",
-            "src/components/solidjs/MobileNav.tsx",
-            "src/components/solidjs/GiscusComments.tsx",
-            "src/content/blog/hello-world.mdx",
-            "src/content/authors/my_blog.mdx",
-            "src/content/tags/general.mdx",
-        ]
-
-        for relative_path in expected:
-            target = project_dir / relative_path
-            assert target.exists(), f"Missing: {relative_path}"
-
-    def test_astro_jinja2_interpolation(self, tmp_path: Path) -> None:
-        """Jinja2 variables are correctly rendered in Astro-specific files."""
-        runner = CliRunner()
-        runner.invoke(
-            cli,
-            [
-                "new",
-                "--name", "my_blog",
-                "--type", "astro",
-                "--description", "Test blog",
-                "--author", "Test Author",
-                "--output-dir", str(tmp_path),
-            ],
-        )
-
-        project_dir = tmp_path / "my_blog"
-
-        consts = (project_dir / "src/consts.ts").read_text()
-        assert "My Blog" in consts
-        assert "Test blog" in consts
-        assert "Test Author" in consts
-
+        # package.json must use the snake_case project name
         package_json = (project_dir / "package.json").read_text()
         assert "my_blog" in package_json
 
     def test_astro_no_jinja2_tags_remaining(self, tmp_path: Path) -> None:
-        """No unrendered Jinja2 tags remain in any generated file.
+        """No unrendered Jinja2 variable tags remain in any generated file.
 
-        Note: {{ }} in .astro/.tsx/.ts files is valid JSX/Astro syntax
-        (e.g. openGraph={{ basic: {...} }}). We only flag {{ identifier }}
-        patterns that look like unrendered Jinja2 variables.
+        {{ }} patterns that are valid JSX/Astro syntax (e.g. object spreads,
+        empty braces) are excluded by the regex — only {{ identifier }} forms
+        are flagged as potential unrendered Jinja2 variables.
         """
         runner = CliRunner()
         runner.invoke(
@@ -620,7 +543,6 @@ class TestAstroTemplate:
                 "--output-dir", str(tmp_path),
             ],
         )
-
         project_dir = tmp_path / "my_blog"
 
         for file_path in project_dir.rglob("*"):

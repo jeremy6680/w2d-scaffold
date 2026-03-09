@@ -1,0 +1,34 @@
+# .github/workflows/ci.yml — w2d-scaffold
+# Runs on every push to main and on all pull requests.
+# Steps: install deps → lint with ruff → run pytest suite.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint with ruff
+        run: ruff check scaffold.py tests/
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
