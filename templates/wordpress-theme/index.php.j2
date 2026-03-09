@@ -1,0 +1,14 @@
+<?php
+/**
+ * Main template file for {{ project_name_human }}.
+ *
+ * Timber routes all requests through index.php.
+ * Context is populated here and passed to Twig.
+ *
+ * @package {{ project_name_human | replace(" ", "_") }}
+ */
+
+$context         = Timber\Timber::context();
+$context['posts'] = Timber\Timber::get_posts();
+
+Timber\Timber::render( 'index.twig', $context );

@@ -196,3 +196,145 @@ def test_duplicate_project_name(runner: CliRunner, base_args: list[str]) -> None
         result = runner.invoke(cli, ["new"] + args)
         assert result.exit_code == 1
         assert "already exists" in result.output
+
+
+# ─── Phase 3 — WordPress templates ───────────────────────────────
+
+class TestWordpressPluginTemplate:
+    """Tests for the wordpress-plugin project type."""
+
+    def test_generates_expected_files(self, tmp_path: Path) -> None:
+        """All expected files are created for a wordpress-plugin project."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_plugin",
+                "--type", "wordpress-plugin",
+                "--description", "A test WP plugin",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        project_dir = tmp_path / "my_plugin"
+        expected_files = [
+            "CONTEXT.md",
+            "NEXT_STEPS.md",
+            "STRUCTURE.md",
+            "DECISIONS.md",
+            "README.md",
+            ".gitignore",
+            ".env.example",
+            "my_plugin.php",
+            "includes/class-my-plugin.php",
+            "includes/helpers.php",
+            "templates/archive.php",
+            "assets/css/main.css",
+            "assets/js/main.js",
+        ]
+        for f in expected_files:
+            assert (project_dir / f).exists(), f"Missing: {f}"
+
+    def test_plugin_header_contains_project_name(self, tmp_path: Path) -> None:
+        """The main plugin file contains the correct Plugin Name header."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_plugin",
+                "--type", "wordpress-plugin",
+                "--description", "A test WP plugin",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        plugin_file = tmp_path / "my_plugin" / "my_plugin.php"
+        content = plugin_file.read_text()
+        assert "Plugin Name: My Plugin" in content
+        assert "MY_PLUGIN_VERSION" in content
+
+
+class TestWordpressThemeTemplate:
+    """Tests for the wordpress-theme project type."""
+
+    def test_generates_expected_files(self, tmp_path: Path) -> None:
+        """All expected files are created for a wordpress-theme project."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_theme",
+                "--type", "wordpress-theme",
+                "--description", "A test WP theme",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        project_dir = tmp_path / "my_theme"
+        expected_files = [
+            "CONTEXT.md",
+            "NEXT_STEPS.md",
+            "STRUCTURE.md",
+            "DECISIONS.md",
+            "README.md",
+            ".gitignore",
+            ".env.example",
+            "style.css",
+            "functions.php",
+            "index.php",
+            "templates/base.twig",
+            "templates/index.twig",
+            "templates/single.twig",
+            "src/scss/_variables.scss",
+            "src/scss/_mixins.scss",
+            "src/scss/main.scss",
+            "src/js/main.js",
+            "acf-json/.gitkeep",
+        ]
+        for f in expected_files:
+            assert (project_dir / f).exists(), f"Missing: {f}"
+
+    def test_style_css_contains_theme_header(self, tmp_path: Path) -> None:
+        """style.css contains the WordPress theme header with correct name."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_theme",
+                "--type", "wordpress-theme",
+                "--description", "A test WP theme",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        style_css = tmp_path / "my_theme" / "style.css"
+        content = style_css.read_text()
+        assert "Theme Name: My Theme" in content
+        assert "Test Author" in content
+
+    def test_functions_php_contains_timber_bootstrap(self, tmp_path: Path) -> None:
+        """functions.php contains the Timber initialisation call."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_theme",
+                "--type", "wordpress-theme",
+                "--description", "A test WP theme",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        functions_php = tmp_path / "my_theme" / "functions.php"
+        content = functions_php.read_text()
+        assert "Timber\\Timber::init()" in content
+        assert "acf-json" in content

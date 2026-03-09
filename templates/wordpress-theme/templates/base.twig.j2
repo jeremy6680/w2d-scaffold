@@ -1,0 +1,27 @@
+{#
+  base.twig — Base layout for {{ project_name_human }}
+  All other templates extend this file.
+  Generated: {{ date }}
+  Author:    {{ author }}
+#}
+<!DOCTYPE html>
+<html lang="{% raw %}{{ site.language }}{% endraw %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% raw %}{{ wp_title ~ ' | ' ~ site.name }}{% endraw %}</title>
+    {% raw %}{{ function('wp_head') }}{% endraw %}
+</head>
+<body class="{% raw %}{{ body_class }}{% endraw %}">
+
+    {% raw %}{% block header %}{% endblock %}{% endraw %}
+
+    <main id="main" tabindex="-1">
+        {% raw %}{% block content %}{% endblock %}{% endraw %}
+    </main>
+
+    {% raw %}{% block footer %}{% endblock %}{% endraw %}
+
+    {% raw %}{{ function('wp_footer') }}{% endraw %}
+</body>
+</html>

@@ -1,0 +1,35 @@
+<?php
+/**
+ * Plugin Name: {{ project_name_human }}
+ * Plugin URI:  https://github.com/{{ author | lower | replace(" ", "") }}/{{ project_name }}
+ * Description: {{ description }}
+ * Version:     0.1.0
+ * Author:      {{ author }}
+ * License:     GPL-2.0-or-later
+ * Text Domain: {{ project_name | replace("_", "-") }}
+ */
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+// Plugin constants.
+define( '{{ project_name | upper }}_VERSION', '0.1.0' );
+define( '{{ project_name | upper }}_DIR', plugin_dir_path( __FILE__ ) );
+define( '{{ project_name | upper }}_URL', plugin_dir_url( __FILE__ ) );
+define( '{{ project_name | upper }}_SLUG', '{{ project_name | replace("_", "-") }}' );
+
+// Autoload includes.
+require_once {{ project_name | upper }}_DIR . 'includes/class-{{ project_name | replace("_", "-") }}.php';
+require_once {{ project_name | upper }}_DIR . 'includes/helpers.php';
+
+/**
+ * Initialise the plugin on 'plugins_loaded'.
+ *
+ * @return void
+ */
+function {{ project_name }}_init(): void {
+    {{ project_name | replace("_", " ") | title | replace(" ", "_") }}::get_instance();
+}
+add_action( 'plugins_loaded', '{{ project_name }}_init' );

@@ -1,0 +1,71 @@
+<?php
+/**
+ * Theme functions for {{ project_name_human }}.
+ *
+ * Bootstraps Timber, registers ACF JSON sync path,
+ * enqueues assets, and adds theme supports.
+ *
+ * @package {{ project_name_human | replace(" ", "_") }}
+ */
+
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+// ─── Timber bootstrap ───────────────────────────────────────
+if ( ! class_exists( 'Timber\Timber' ) ) {
+    add_action( 'admin_notices', function (): void {
+        echo '<div class="error"><p>Timber is not installed. Please install the Timber plugin.</p></div>';
+    } );
+    return;
+}
+
+Timber\Timber::init();
+
+// Tell Timber where to find Twig templates.
+add_filter( 'timber/locations', function ( array $paths ): array {
+    $paths[] = get_template_directory() . '/templates';
+    return $paths;
+} );
+
+// ─── ACF JSON sync ──────────────────────────────────────────
+add_filter( 'acf/settings/save_json', function (): string {
+    return get_template_directory() . '/acf-json';
+} );
+
+add_filter( 'acf/settings/load_json', function ( array $paths ): array {
+    $paths[] = get_template_directory() . '/acf-json';
+    return $paths;
+} );
+
+// ─── Theme supports ─────────────────────────────────────────
+add_action( 'after_setup_theme', function (): void {
+    add_theme_support( 'title-tag' );
+    add_theme_support( 'post-thumbnails' );
+    add_theme_support( 'html5', [ 'search-form', 'comment-form', 'gallery', 'caption' ] );
+    add_theme_support( 'responsive-embeds' );
+
+    register_nav_menus( [
+        'primary' => __( 'Primary Navigation', '{{ project_name | replace("_", "-") }}' ),
+        'footer'  => __( 'Footer Navigation', '{{ project_name | replace("_", "-") }}' ),
+    ] );
+} );
+
+// ─── Assets ─────────────────────────────────────────────────
+add_action( 'wp_enqueue_scripts', function (): void {
+    wp_enqueue_style(
+        '{{ project_name | replace("_", "-") }}-style',
+        get_template_directory_uri() . '/assets/css/main.css',
+        [],
+        '0.1.0'
+    );
+
+    wp_enqueue_script(
+        '{{ project_name | replace("_", "-") }}-script',
+        get_template_directory_uri() . '/assets/js/main.js',
+        [],
+        '0.1.0',
+        true
+    );
+} );
