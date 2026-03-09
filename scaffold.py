@@ -1,9 +1,6 @@
-"""
-w2d-scaffold — CLI entry point.
-
-Generates a complete project structure from a single command.
-Usage: python scaffold.py new / make new
-"""
+# scaffold.py — w2d-scaffold
+# Main CLI entrypoint. Handles project generation via Click commands.
+# Uses Jinja2 to render templates from the templates/ directory.
 
 import re
 import shutil
@@ -13,10 +10,7 @@ from pathlib import Path
 import click
 from jinja2 import Environment, FileSystemLoader
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
+# Supported project types
 VALID_TYPES = [
     "data",
     "rag",
@@ -29,44 +23,45 @@ VALID_TYPES = [
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+def slugify(name: str) -> str:
+    """
+    Convert a string to a safe snake_case project name.
 
-
-def to_snake_case(name: str) -> str:
-    """Convert a project name to snake_case, replacing hyphens and spaces.
+    Replaces spaces and hyphens with underscores, removes special characters,
+    and lowercases the result.
 
     Args:
-        name: Raw project name provided by the user.
+        name: Raw project name input by the user.
 
     Returns:
-        Normalised snake_case string.
+        A clean snake_case string suitable for use as a Python identifier.
     """
-    name = name.strip().lower()
+    name = name.lower().strip()
     name = re.sub(r"[\s\-]+", "_", name)
-    name = re.sub(r"[^a-z0-9_]", "", name)
+    name = re.sub(r"[^\w]", "", name)
     return name
 
 
-def to_title_case(name: str) -> str:
-    """Convert a snake_case or hyphenated name to human-readable Title Case.
+def to_human(name: str) -> str:
+    """
+    Convert a snake_case or kebab-case name to Title Case.
 
     Args:
-        name: snake_case or hyphenated project name.
+        name: snake_case or kebab-case string.
 
     Returns:
-        Title Case string.
+        Title Case string for display purposes.
     """
-    return re.sub(r"[\s_\-]+", " ", name).title()
+    return name.replace("_", " ").replace("-", " ").title()
 
 
 def render_template(template_path: Path, context: dict) -> str:
-    """Render a single Jinja2 template file with the given context.
+    """
+    Render a single Jinja2 template file with the given context.
 
     Args:
         template_path: Absolute path to the .j2 template file.
-        context: Dictionary of Jinja2 variables.
+        context: Dictionary of variables to inject into the template.
 
     Returns:
         Rendered string content.
@@ -79,105 +74,138 @@ def render_template(template_path: Path, context: dict) -> str:
     return template.render(**context)
 
 
-def generate_from_dir(
-    template_dir: Path,
-    output_dir: Path,
-    context: dict,
-) -> None:
-    """Recursively render all .j2 templates from a directory into output_dir.
-
-    Non-.j2 files are copied as-is (binary-safe).
+def copy_common_templates(output_dir: Path, context: dict) -> None:
+    """
+    Render and copy all _common templates into the output directory.
 
     Args:
-        template_dir: Source directory containing .j2 templates.
-        output_dir: Destination directory for rendered files.
-        context: Jinja2 template variables.
+        output_dir: Target project directory.
+        context: Jinja2 rendering context.
     """
-    for item in sorted(template_dir.rglob("*")):
+    common_dir = TEMPLATES_DIR / "_common"
+    for template_file in sorted(common_dir.glob("*.j2")):
+        output_filename = template_file.stem  # removes .j2 extension
+        output_path = output_dir / output_filename
+        rendered = render_template(template_file, context)
+        output_path.write_text(rendered, encoding="utf-8")
+
+
+def copy_type_templates(output_dir: Path, project_type: str, context: dict) -> None:
+    """
+    Render and copy all type-specific templates into the output directory,
+    preserving subdirectory structure.
+
+    Args:
+        output_dir: Target project directory.
+        project_type: One of the VALID_TYPES strings.
+        context: Jinja2 rendering context.
+    """
+    type_dir = TEMPLATES_DIR / project_type
+    if not type_dir.exists():
+        return
+
+    for item in sorted(type_dir.rglob("*")):
         if item.is_dir():
             continue
 
-        relative = item.relative_to(template_dir)
+        relative = item.relative_to(type_dir)
 
-        # Replace {{ project_name }} placeholder in path segments
-        rendered_relative = Path(
-            *[
-                part.replace("__project_name__", context["project_name"])
-                for part in relative.parts
-            ]
-        )
-
-        dest = output_dir / rendered_relative
-
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        # Remove .j2 extension from output filename if present
+        parts = list(relative.parts)
+        parts[-1] = parts[-1].removesuffix(".j2")
+        output_path = output_dir / Path(*parts)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if item.suffix == ".j2":
-            # Strip the .j2 extension in the output filename
-            dest = dest.with_suffix("")
-            dest.write_text(render_template(item, context), encoding="utf-8")
+            rendered = render_template(item, context)
+            output_path.write_text(rendered, encoding="utf-8")
         else:
-            shutil.copy2(item, dest)
+            # Non-template files (e.g. .gitkeep) are copied as-is
+            shutil.copy2(item, output_path)
 
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
+def generate_project(
+    name: str,
+    project_type: str,
+    description: str,
+    author: str,
+    output_base: Path,
+) -> Path:
+    """
+    Orchestrate the full project generation: render common + type-specific templates.
+
+    Args:
+        name: Raw project name (will be slugified).
+        project_type: One of the VALID_TYPES strings.
+        description: Short project description.
+        author: Author full name.
+        output_base: Directory where the new project folder will be created.
+
+    Returns:
+        Path to the generated project directory.
+
+    Raises:
+        FileExistsError: If the target directory already exists.
+    """
+    project_name = slugify(name)
+    output_dir = output_base / project_name
+
+    if output_dir.exists():
+        raise FileExistsError(
+            f"Directory '{output_dir}' already exists. "
+            "Use --force to overwrite (not yet implemented)."
+        )
+
+    output_dir.mkdir(parents=True)
+
+    context = {
+        "project_name": project_name,
+        "project_name_human": to_human(name),
+        "description": description,
+        "author": author,
+        "date": date.today().isoformat(),
+        "type": project_type,
+    }
+
+    copy_common_templates(output_dir, context)
+    copy_type_templates(output_dir, project_type, context)
+
+    return output_dir
 
 
 @click.group()
 def cli() -> None:
-    """w2d-scaffold — opinionated project scaffolding for LLM-assisted workflows."""
+    """w2d-scaffold — Generate opinionated project structures for LLM-assisted workflows."""
+    pass
 
 
-@cli.command("new")
-@click.option("--name", "-n", default=None, help="Project name (snake_case).")
+@cli.command()
+@click.option("--name", "-n", default=None, help="Project name")
 @click.option(
     "--type",
     "-t",
     "project_type",
     default=None,
     type=click.Choice(VALID_TYPES, case_sensitive=False),
-    help="Project type.",
+    help="Project type",
 )
-@click.option("--description", "-d", default=None, help="Short project description.")
-@click.option("--author", "-a", default=None, help="Author name.")
-@click.option(
-    "--output",
-    "-o",
-    default=".",
-    show_default=True,
-    help="Parent directory where the project folder will be created.",
-)
-@click.option(
-    "--force",
-    is_flag=True,
-    default=False,
-    help="Overwrite an existing directory.",
-)
-def new_project(
+@click.option("--description", "-d", default="", help="Short project description")
+@click.option("--author", "-a", default="", help="Author name")
+def new(
     name: str | None,
     project_type: str | None,
-    description: str | None,
-    author: str | None,
-    output: str,
-    force: bool,
+    description: str,
+    author: str,
 ) -> None:
-    """Generate a new project scaffold interactively or via flags."""
+    """
+    Generate a new project structure.
 
-    # -- Interactive prompts for missing values ----------------------------
-    if not name:
+    Runs interactively if --name or --type are not provided.
+    """
+    if name is None:
         name = click.prompt("Project name")
 
-    project_name = to_snake_case(name)
-
-    # Warn user if normalisation changed the name
-    if project_name != name:
-        click.echo(
-            f"  ℹ️  Name normalised to snake_case: '{project_name}'"
-        )
-        click.confirm("  Continue with this name?", default=True, abort=True)
-
-    if not project_type:
+    if project_type is None:
         project_type = click.prompt(
             "Project type",
             type=click.Choice(VALID_TYPES, case_sensitive=False),
@@ -189,47 +217,21 @@ def new_project(
     if not author:
         author = click.prompt("Author", default="")
 
-    # -- Resolve output directory -----------------------------------------
-    output_base = Path(output).resolve()
-    project_dir = output_base / project_name
+    output_base = Path.cwd()
 
-    if project_dir.exists():
-        if force:
-            shutil.rmtree(project_dir)
-            click.echo(f"  ⚠️  Existing directory removed: {project_dir}")
-        else:
-            raise click.ClickException(
-                f"Directory '{project_dir}' already exists. "
-                "Use --force to overwrite."
-            )
+    try:
+        output_dir = generate_project(
+            name=name,
+            project_type=project_type,
+            description=description,
+            author=author,
+            output_base=output_base,
+        )
+        click.echo(f"✅ Project '{output_dir.name}' created at {output_dir}")
+    except FileExistsError as e:
+        click.echo(f"❌ {e}", err=True)
+        raise SystemExit(1)
 
-    project_dir.mkdir(parents=True)
-
-    # -- Build Jinja2 context ---------------------------------------------
-    context: dict = {
-        "project_name": project_name,
-        "project_name_human": to_title_case(project_name),
-        "description": description,
-        "author": author,
-        "date": date.today().isoformat(),
-        "type": project_type,
-    }
-
-    # -- Render _common templates -----------------------------------------
-    common_dir = TEMPLATES_DIR / "_common"
-    generate_from_dir(common_dir, project_dir, context)
-
-    # -- Render type-specific templates -----------------------------------
-    type_dir = TEMPLATES_DIR / project_type
-    if type_dir.exists():
-        generate_from_dir(type_dir, project_dir, context)
-
-    click.echo(f"\n✅  Project '{project_name}' created at {project_dir}\n")
-
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     cli()
