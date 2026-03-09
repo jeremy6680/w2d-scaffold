@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "{{ project_name }}"
+version = "0.1.0"
+description = "{{ description }}"
+authors = [{ name = "{{ author }}" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+
+# Add your runtime dependencies here.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+# Uncomment and adjust once you have a CLI entrypoint:
+# {{ project_name }} = "{{ project_name }}.main:main"
+
+[tool.pytest.ini_options]
+# Allow `python -m pytest` to resolve the src/ layout without installing the package.
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/W = pycodestyle, F = pyflakes, I = isort
+select = ["E", "F", "I", "W"]

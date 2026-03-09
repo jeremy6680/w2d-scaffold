@@ -338,3 +338,103 @@ class TestWordpressThemeTemplate:
         content = functions_php.read_text()
         assert "Timber\\Timber::init()" in content
         assert "acf-json" in content
+
+
+# =============================================================================
+# Phase 4a: python template
+# =============================================================================
+
+class TestPythonTemplate:
+    """Tests for the `python` project type."""
+
+    def test_python_expected_files(self, tmp_path: Path) -> None:
+        """All expected files are generated for a python project."""
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_lib",
+                "--type", "python",
+                "--description", "A typed Python library",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+        project_dir = tmp_path / "my_lib"
+
+        expected = [
+            # Common scaffold
+            "CONTEXT.md",
+            "NEXT_STEPS.md",
+            "STRUCTURE.md",
+            "DECISIONS.md",
+            "README.md",
+            ".gitignore",
+            ".env.example",
+            # Python-specific
+            "src/my_lib/__init__.py",
+            "src/my_lib/main.py",
+            "tests/test_main.py",
+            "pyproject.toml",
+        ]
+
+        for relative_path in expected:
+            target = project_dir / relative_path
+            assert target.exists(), f"Missing: {relative_path}"
+
+    def test_python_jinja2_interpolation(self, tmp_path: Path) -> None:
+        """Jinja2 variables are correctly rendered in Python-specific files."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_lib",
+                "--type", "python",
+                "--description", "A typed Python library",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_lib"
+
+        # pyproject.toml must contain the project name and description
+        pyproject = (project_dir / "pyproject.toml").read_text()
+        assert "my_lib" in pyproject
+        assert "A typed Python library" in pyproject
+
+        # main.py must reference the human name
+        main_py = (project_dir / "src/my_lib/main.py").read_text()
+        assert "My Lib" in main_py
+
+        # test file must import from the package
+        test_py = (project_dir / "tests/test_main.py").read_text()
+        assert "from my_lib.main import main" in test_py
+
+    def test_python_no_jinja2_tags_remaining(self, tmp_path: Path) -> None:
+        """No unrendered Jinja2 tags remain in any generated file."""
+        runner = CliRunner()
+        runner.invoke(
+            cli,
+            [
+                "new",
+                "--name", "my_lib",
+                "--type", "python",
+                "--description", "A typed Python library",
+                "--author", "Test Author",
+                "--output-dir", str(tmp_path),
+            ],
+        )
+
+        project_dir = tmp_path / "my_lib"
+
+        for file_path in project_dir.rglob("*"):
+            if file_path.is_file():
+                content = file_path.read_text(errors="ignore")
+                assert "{{" not in content, (
+                    f"Unrendered Jinja2 tag in: {file_path.relative_to(project_dir)}"
+                )
