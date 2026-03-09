@@ -93,3 +93,35 @@ layout, and is fully PEP 517/518 compliant.
 - `[tool.pytest.ini_options] pythonpath = ["src"]` allows `python -m pytest`
   without `pip install -e .`, consistent with the project constraint of
   testability without a global install.
+
+## Jinja2 raw blocks for TypeScript/TSX/Astro templates
+
+**Date:** 2026-03-09
+**Status:** Accepted
+
+**Context:**
+TypeScript, TSX, and Astro frontmatter files use `{ }`, `:`, and `? :`
+syntax that conflicts with Jinja2's expression delimiters (`{{ }}`) and
+causes `TemplateSyntaxError` at render time.
+
+**Decision:**
+Wrap the body of all `.ts`, `.tsx`, and `.astro` templates in
+`{% raw %} ... {% endraw %}` blocks. Variables that must be interpolated
+(e.g. `date`, `project_name_human`, `author`) are captured into local
+Jinja2 variables with `{% set _var = var %}` **before** the raw block,
+then referenced outside it at the specific line where needed.
+
+**Alternatives considered:**
+
+- Changing Jinja2 delimiters globally (e.g. `[[` / `]]`) → breaks all
+  existing templates and makes `.j2` files unreadable without context.
+- Escaping every `{` with `{{ '{' }}` → extremely verbose and fragile
+  for TSX files with dozens of JSX expressions.
+
+**Consequences:**
+
+- Templates remain readable and close to the final rendered output.
+- The `{% set %}` / `{% raw %}` pattern is a documented Jinja2 idiom —
+  readable by any developer familiar with the engine.
+- Any future template targeting a language with `{ }` syntax must follow
+  this convention.

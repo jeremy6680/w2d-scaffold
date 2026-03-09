@@ -24,12 +24,12 @@ _Last updated: 2026-03-09_
 | **Phase 4 — Templates python & astro**                     |            |
 | Template `python` — src/ layout, pyproject.toml, tests/    | 2026-03-09 |
 | Tests pytest phase 4a (python)                             | 2026-03-09 |
+| Template `astro` — Astro v5, Tailwind v4, SolidJS, Giscus  | 2026-03-09 |
 
 ## 🔜 To do
 
-| #   | Task                                           | Priority | Notes                                                 |
-| --- | ---------------------------------------------- | -------- | ----------------------------------------------------- |
-| 1   | Phase 4 — Template `astro`                     | High     | Astro v5 + Tailwind v4 + SolidJS + Giscus + astro-seo |
-| 2   | Tests pytest phase 4b (astro)                  | High     |                                                       |
-| 3   | Phase 5 — README.md final + démo gif/asciinema | Low      |                                                       |
-| 4   | Phase 5 — GitHub Actions (ruff + pytest)       | Low      | .github/workflows/ci.yml                              |
+| #   | Task                                           | Priority | Notes                              |
+| --- | ---------------------------------------------- | -------- | ---------------------------------- |
+| 1   | Tests pytest phase 4b (astro)                  | High     | Vérifier tous les fichiers générés |
+| 2   | Phase 5 — README.md final + démo gif/asciinema | Low      |                                    |
+| 3   | Phase 5 — GitHub Actions (ruff + pytest)       | Low      | .github/workflows/ci.yml           |

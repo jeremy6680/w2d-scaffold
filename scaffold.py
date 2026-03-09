@@ -71,13 +71,20 @@ def to_human(name: str) -> str:
     return name.replace("_", " ").replace("-", " ").title()
 
 
+# Placeholders used in template filenames and directory names.
+FILENAME_PLACEHOLDER = "PROJECT_NAME"
+SLUG_PLACEHOLDER = "PROJECT_SLUG"
+SLUG_ROUTE_PLACEHOLDER = "SLUG_ROUTE"
+
+
 def resolve_output_filename(filename: str, project_name: str) -> str:
     """
     Replace dynamic placeholders in a single path segment with actual values.
 
     Supported placeholders:
         PROJECT_NAME → project_name          (snake_case, e.g. my_plugin)
-        PROJECT_SLUG → project_name kebab    (kebab-case, e.g. my-plugin)
+        PROJECT_SLUG → kebab-case slug       (e.g. my-plugin)
+        SLUG_ROUTE   → [...slug]             (Astro catch-all route syntax)
 
     Args:
         filename:     A single path segment (filename or directory name),
@@ -90,6 +97,7 @@ def resolve_output_filename(filename: str, project_name: str) -> str:
     slug = project_name.replace("_", "-")
     filename = filename.replace(FILENAME_PLACEHOLDER, project_name)
     filename = filename.replace(SLUG_PLACEHOLDER, slug)
+    filename = filename.replace(SLUG_ROUTE_PLACEHOLDER, "[...slug]")
     return filename
 
 
